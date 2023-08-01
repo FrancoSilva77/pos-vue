@@ -1,5 +1,8 @@
 <script setup>
 import Link from "../../components/Link.vue";
+import useImage from "../../composables/useImage";
+
+const { url, onFileChange, isImageUploaded } = useImage();
 </script>
 
 <template>
@@ -10,7 +13,11 @@ import Link from "../../components/Link.vue";
 
     <div class="flex justify-center bg-white shadow">
       <div class="mt-10 p-10 w-full 2xl:w-2/4">
-        <FormKit type="form" submit-label="Agregar Producto">
+        <FormKit
+          type="form"
+          submit-label="Agregar Producto"
+          incomplete-message="No se pudo enviar, Revisa los mensages"
+        >
           <FormKit
             type="text"
             label="Nombre"
@@ -30,7 +37,15 @@ import Link from "../../components/Link.vue";
               required: 'La imagen del Producto es Obligatoria',
             }"
             accept=".jpg"
+            @change="onFileChange"
           />
+
+          <div class="" v-if="isImageUploaded">
+            <p class="font-black">Imagen Producto:</p>
+
+            <img :src="url" alt="Imagen de Producto" class="w-32" />
+          </div>
+
           <FormKit
             type="select"
             label="Categoria"
@@ -48,7 +63,7 @@ import Link from "../../components/Link.vue";
             placeholder="Precio del Producto"
             validation="required"
             :validation-messages="{
-              required: 'La precio del Producto es Obligatoria',
+              required: 'El precio del Producto es Obligatoria',
             }"
             min="1"
           />
