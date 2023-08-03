@@ -1,8 +1,35 @@
 <script setup>
-import Link from "../../components/Link.vue";
-import useImage from "../../composables/useImage";
+import { reactive } from 'vue';
+import { useRouter } from 'vue-router';
+import Link from '../../components/Link.vue';
+import useImage from '../../composables/useImage';
+import { useProductsStore } from '../../stores/products';
 
 const { url, onFileChange, isImageUploaded } = useImage();
+const produtcs = useProductsStore();
+const router = useRouter();
+
+const formData = reactive({
+  name: '',
+  category: '',
+  price: '',
+  availability: '',
+  image: '',
+});
+
+const submitHandler = async (data) => {
+  const { image, ...values } = data;
+
+  try {
+    await produtcs.createProduct({
+      ...values,
+      image: url.value,
+    });
+    router.push({ name: 'products' });
+  } catch (error) {
+    console.log(error);
+  }
+};
 </script>
 
 <template>
@@ -17,6 +44,8 @@ const { url, onFileChange, isImageUploaded } = useImage();
           type="form"
           submit-label="Agregar Producto"
           incomplete-message="No se pudo enviar, Revisa los mensages"
+          @submit="submitHandler"
+          :value="formData"
         >
           <FormKit
             type="text"
@@ -27,6 +56,7 @@ const { url, onFileChange, isImageUploaded } = useImage();
             :validation-messages="{
               required: ' El nombre del producto es obligatorio',
             }"
+            v-model.trim="formData.name"
           />
           <FormKit
             type="file"
@@ -38,12 +68,20 @@ const { url, onFileChange, isImageUploaded } = useImage();
             }"
             accept=".jpg"
             @change="onFileChange"
+            v-model.trim="formData.image"
           />
 
-          <div class="" v-if="isImageUploaded">
+          <div
+            class=""
+            v-if="isImageUploaded"
+          >
             <p class="font-black">Imagen Producto:</p>
 
-            <img :src="url" alt="Imagen de Producto" class="w-32" />
+            <img
+              :src="url"
+              alt="Imagen de Producto"
+              class="w-32"
+            />
           </div>
 
           <FormKit
@@ -54,7 +92,8 @@ const { url, onFileChange, isImageUploaded } = useImage();
             :validation-messages="{
               required: 'La categoria del Producto es Obligatoria',
             }"
-            :options="[1, 2, 3]"
+            :options="produtcs.categoryOptions"
+            v-model.number="formData.category"
           />
           <FormKit
             type="number"
@@ -66,6 +105,7 @@ const { url, onFileChange, isImageUploaded } = useImage();
               required: 'El precio del Producto es Obligatoria',
             }"
             min="1"
+            v-model.number="formData.price"
           />
           <FormKit
             type="number"
@@ -77,6 +117,7 @@ const { url, onFileChange, isImageUploaded } = useImage();
               required: 'La cantidad Disponible del Producto es Obligatoria',
             }"
             min="1"
+            v-model.number="formData.availability"
           />
         </FormKit>
       </div>
