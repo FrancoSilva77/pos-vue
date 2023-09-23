@@ -56,5 +56,13 @@ const coupon = useCouponsStore()
     </dl>
 
     <CuponForm />
+
+    <button
+    type="button"
+    class="mt-10 p-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white uppercase font-bold"
+    @click="cart.checkout"
+    >
+      Confirmar Compra
+    </button>
   </div>
 </template>

@@ -1,9 +1,14 @@
 import { ref, computed, watchEffect } from 'vue';
 import { defineStore } from 'pinia';
+import { collection, addDoc, runTransaction, doc } from 'firebase/firestore';
+import { useFirestore } from 'vuefire';
 import { useCouponsStore } from './coupons';
+import { getCurrentDate } from '../utils';
 
 export const useCartStore = defineStore('cart', () => {
   const coupon = useCouponsStore();
+
+  const db = useFirestore();
 
   const items = ref([]);
   const subtotal = ref(0);
@@ -19,8 +24,8 @@ export const useCartStore = defineStore('cart', () => {
       (total, item) => total + item.quantity * item.price,
       0
     );
-    taxes.value = subtotal.value * TAX_RATE;
-    total.value = (subtotal.value + taxes.value) - coupon.discount;
+    taxes.value = +(subtotal.value * TAX_RATE).toFixed(2);
+    total.value = +(subtotal.value + taxes.value - coupon.discount).toFixed(2);
   });
 
   function addItem(item) {
@@ -46,6 +51,46 @@ export const useCartStore = defineStore('cart', () => {
     items.value = items.value.filter((item) => item.id !== id);
   }
 
+  async function checkout() {
+    try {
+      await addDoc(collection(db, 'sales'), {
+        items: items.value.map((item) => {
+          const { availability, category, ...data } = item;
+          return data;
+        }),
+        subtotal: subtotal.value,
+        taxes: taxes.value,
+        discount: coupon.discount,
+        total: total.value,
+        date: getCurrentDate(),
+      });
+
+      // Sustraer la cantidad de lo disponible
+      items.value.forEach(async (item) => {
+        const productRef = doc(db, 'products', item.id);
+        await runTransaction(db, async (transaction) => {
+          const currentProduct = await transaction.get(productRef);
+          const availability =
+            currentProduct.data().availability - item.quantity;
+          transaction.update(productRef, { availability });
+        });
+      });
+
+      // Reiniciar el state
+      $reset();
+      coupon.$reset();
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  function $reset() {
+    items.value = [];
+    subtotal.value = 0;
+    taxes.value = 0;
+    total.value = 0;
+  }
+
   const isItemInCart = (id) => items.value.findIndex((item) => item.id === id);
 
   const isProductAvailable = (item, index) => {
@@ -69,6 +114,7 @@ export const useCartStore = defineStore('cart', () => {
     total,
     addItem,
     removeItem,
+    checkout,
     isEmpty,
     checkProductAvailibility,
     updateQuantity,
